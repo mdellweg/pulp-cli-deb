@@ -1,4 +1,6 @@
 
+# This file is managed by the cookiecutter templates.
+# Do not edit manually
 LANGUAGES=de
 GLUE_PLUGINS=$(notdir $(wildcard pulp-glue-deb/src/pulp_glue/*))
 CLI_PLUGINS=$(notdir $(wildcard src/pulpcore/cli/*))
@@ -29,15 +31,15 @@ _autofix:
 
 .PHONY: autofix
 autofix:
-	uv lock
 	uv run --isolated --group lint $(MAKE) _autofix
 
 .PHONY: _lint
 _lint:
 	find tests .ci -name '*.sh' -print0 | xargs -0 shellcheck -x
 	ruff format --check --diff
-	ruff check
+	ruff check --output-format concise
 	.ci/scripts/check_cli_dependencies.py
+	.ci/scripts/check_changelog_snippets.py
 	.ci/scripts/check_click_for_mypy.py
 	mypy
 	cd pulp-glue-deb; mypy
@@ -45,7 +47,6 @@ _lint:
 
 .PHONY: lint
 lint:
-	uv lock --check
 	uv run --isolated --group lint $(MAKE) _lint
 
 tests/cli.toml:
@@ -72,7 +73,7 @@ livetest:
 
 .PHONY: _paralleltest
 _paralleltest: | tests/cli.toml
-	pytest -v tests pulp-glue-deb/tests -m live -n 8
+	pytest -v tests pulp-glue-deb/tests -m "$(PYTEST_MARK)" -n 8
 
 .PHONY: paralleltest
 paralleltest:

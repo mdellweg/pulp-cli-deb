@@ -1,10 +1,14 @@
 ---
-name: "pulp-cli Publish"
+name: "Publish"
 
 on:
   push:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
+
+defaults:
+  run:
+    working-directory: "pulp-cli-deb"
 
 jobs:
   build:
@@ -13,25 +17,20 @@ jobs:
     name: "Publish to PyPI"
     needs: "build"
     runs-on: "ubuntu-latest"
+    environment:
+      name: "pypi"
+    permissions:
+      id-token: "write"
     steps:
-      - name: "Checkout"
-        uses: "actions/checkout@v6"
       - name: "Download wheels"
         uses: "actions/download-artifact@v8"
         with:
           name: "pulp_cli_packages"
-      - name: "Set up Python"
-        uses: "actions/setup-python@v6"
-        with:
-          python-version: "3.14"
-          allow-prereleases: true
       - name: "Install uv"
         uses: "astral-sh/setup-uv@v7"
         with:
-          enable-cache: true
+          enable-cache: false
       - name: "Publish"
-        env:
-          UV_PUBLISH_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
         run: |
           uv publish
 ...

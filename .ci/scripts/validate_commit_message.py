@@ -12,9 +12,8 @@ import sys
 from pathlib import Path
 
 import tomllib
-from github import Github
 
-with open("pyproject.toml", "rb") as fp:
+with Path("pyproject.toml").open("rb") as fp:
     PYPROJECT_TOML = tomllib.load(fp)
 KEYWORDS = ["fixes", "closes"]
 BLOCKING_REGEX = [
@@ -36,11 +35,13 @@ if NOISSUE_MARKER in message:
 if any(re.match(pattern, message) for pattern in BLOCKING_REGEX):
     sys.exit("This PR is not ready for consumption.")
 
-g = Github(os.environ.get("GITHUB_TOKEN"))
-repo = g.get_repo("pulp/pulp-cli-deb")
-
 
 def check_status(issue: str) -> None:
+    from github import Github
+
+    g = Github(os.environ.get("GITHUB_TOKEN"))
+    repo = g.get_repo("pulp/pulp-cli-deb")
+
     gi = repo.get_issue(int(issue))
     if gi.pull_request:
         sys.exit(f"Error: issue #{issue} is a pull request.")
@@ -61,7 +62,9 @@ def check_changelog(issue: str) -> None:
 print(f"Checking commit message for {sha[0:7]}.")
 
 # validate the issue attached to the commit
-issue_regex = r"(?:{keywords})[\s:]+#(\d+)".format(keywords=("|").join(KEYWORDS))
+issue_regex = r"(?:{keywords})[\s:]+#(\d+)".format(
+    keywords=("|").join(re.escape(k) for k in KEYWORDS)
+)
 issues = re.findall(issue_regex, message, re.IGNORECASE)
 cherry_pick_regex = r"^\s*\(cherry picked from commit [0-9a-f]*\)\s*$"
 cherry_pick = re.search(cherry_pick_regex, message, re.MULTILINE)
@@ -69,7 +72,7 @@ cherry_pick = re.search(cherry_pick_regex, message, re.MULTILINE)
 if issues:
     for issue in issues:
         if not cherry_pick:
-            check_status(issue)
             check_changelog(issue)
+            check_status(issue)
 
 print(f"Commit message for {sha[0:7]} passed.")
